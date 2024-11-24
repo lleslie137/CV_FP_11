@@ -2,16 +2,6 @@ import streamlit as st
 import cv2
 import numpy as np
 from PIL import Image
-import torch
-from transformers import ViTForImageClassification, ViTImageProcessor
-
-# Load the pre-trained model
-# model_path = "./vit-deepfake-detector"  # Path to your trained model
-# model = ViTForImageClassification.from_pretrained(model_path)
-# processor = ViTImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
-
-# Set model to evaluation mode
-# model.eval()
 
 # Function to detect and crop face
 def detect_and_crop_face(image):
@@ -34,22 +24,9 @@ def detect_and_crop_face(image):
 
     return None
 
-# Function to make predictions
-def predict_image(image):
-    # Process the image with the ViT processor
-    inputs = processor(images=image, return_tensors="pt")
-
-    # Get model predictions
-    outputs = model(**inputs)
-    logits = outputs.logits
-    probabilities = torch.nn.functional.softmax(logits, dim=-1)
-    confidence, prediction = torch.max(probabilities, dim=-1)
-
-    return prediction.item(), confidence.item(), probabilities.tolist()
-
 # Streamlit app
-st.title("Deepfake Detection App")
-st.write("Upload an image, and the app will detect if it is real or fake.")
+st.title("Face Detection App")
+st.write("Upload an image, and the app will detect and crop the face (if any).")
 
 # File uploader
 uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
@@ -63,18 +40,13 @@ if uploaded_file is not None:
     st.write("Detecting face...")
     cropped_face = detect_and_crop_face(image)
 
+    # Display results
     if cropped_face is None:
         st.error("No face detected. Please upload an image with a clear face.")
     else:
-        st.image(cropped_face, caption="Cropped Face", use_column_width=True)
-
-        # Make prediction
-        st.write("Making prediction...")
-        prediction, confidence, probabilities = predict_image(cropped_face)
-
-        # Display the results
-        label = "Real" if prediction == 0 else "Fake"
-        st.write(f"Prediction: **{label}**")
-        st.write(f"Confidence: **{confidence * 100:.2f}%**")
-        st.write("Class Probabilities:")
-        st.json({"Real": probabilities[0][0], "Fake": probabilities[0][1]})
+        st.write("Face detected and cropped.")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.image(image, caption="Original Image", use_column_width=True)
+        with col2:
+            st.image(cropped_face, caption="Cropped Face", use_column_width=True)
