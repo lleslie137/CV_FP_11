@@ -4,7 +4,17 @@ import numpy as np
 from PIL import Image
 
 # Function to detect and crop face
-def detect_and_crop_face(image):
+def detect_and_crop_face(image, margin=20):
+    """
+    Detects a face in the image and crops it with an additional margin.
+
+    Args:
+        image (PIL.Image): Input image.
+        margin (int): Extra pixels to include around the detected face.
+
+    Returns:
+        PIL.Image or None: Cropped face image or None if no face is detected.
+    """
     # Convert PIL image to numpy array for OpenCV
     image_np = np.array(image)
     gray = cv2.cvtColor(image_np, cv2.COLOR_BGR2GRAY)
@@ -19,10 +29,16 @@ def detect_and_crop_face(image):
 
     # Crop the first detected face
     for (x, y, w, h) in faces:
-        cropped_face = image_np[y:y+h, x:x+w]
+        # Add a margin around the face
+        x1 = max(x - margin, 0)  # Ensure the crop doesn't go out of bounds
+        y1 = max(y - margin, 0)
+        x2 = min(x + w + margin, image_np.shape[1])  # Stay within the image width
+        y2 = min(y + h + margin, image_np.shape[0])  # Stay within the image height
+        cropped_face = image_np[y1:y2, x1:x2]
         return Image.fromarray(cropped_face)
 
     return None
+
 
 # Streamlit app
 st.title("Face Detection App")
@@ -34,7 +50,6 @@ uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
 if uploaded_file is not None:
     # Load the uploaded image
     image = Image.open(uploaded_file)
-    st.image(image, caption="Uploaded Image", use_column_width=True)
 
     # Detect and crop face
     st.write("Detecting face...")
