@@ -11,11 +11,15 @@ from transformers import ViTForImageClassification, AutoConfig, ViTImageProcesso
 model_path = "model091.safetensors"  # Replace with your safetensors file path
 
 # Load the model configuration
-config = AutoConfig.from_pretrained("google/vit-base-patch16-224-in21k", num_labels=2)
+# config = AutoConfig.from_pretrained("google/vit-base-patch16-224-in21k", num_labels=2)
 
-# Initialize the model with the configuration
-model = ViTForImageClassification(config)
-
+# # Initialize the model with the configuration
+# model = ViTForImageClassification(config)
+model = ViTForImageClassification.from_pretrained(
+    "google/vit-base-patch16-224-in21k",
+    num_labels=2,
+    torch_dtype=torch.float16
+)
 # Load the weights from the safetensors file
 state_dict = load_file(model_path)  # Use safetensors to load the file
 model.load_state_dict(state_dict)
