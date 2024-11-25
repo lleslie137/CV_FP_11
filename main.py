@@ -27,16 +27,17 @@ model.eval()
 processor = ViTImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
 
 # Function to detect and crop face
-def detect_and_crop_face(image, target_size=224):
+def detect_and_crop_face(image, target_size=224, margin=20):
     """
-    Detects a face in the image using Mediapipe and crops it to a fixed size around the face.
+    Detects a face in the image using Mediapipe and properly crops the face, scaling it to the desired size.
 
     Args:
         image (PIL.Image): Input image.
         target_size (int): Desired output size for the cropped face (e.g., 224x224).
+        margin (int): Extra pixels to include around the detected face.
 
     Returns:
-        PIL.Image or None: Cropped face image of size `target_size x target_size`, or None if no face is detected.
+        PIL.Image or None: Cropped and resized face image, or None if no face is detected.
     """
     mp_face_detection = mp.solutions.face_detection
 
@@ -61,24 +62,22 @@ def detect_and_crop_face(image, target_size=224):
             w = int(bboxC.width * iw)
             h = int(bboxC.height * ih)
 
-            # Compute the center of the bounding box
-            center_x = x + w // 2
-            center_y = y + h // 2
+            # Add margin around the bounding box
+            x1 = max(x - margin, 0)
+            y1 = max(y - margin, 0)
+            x2 = min(x + w + margin, iw)
+            y2 = min(y + h + margin, ih)
 
-            # Compute the square crop dimensions for 224x224 output
-            half_size = target_size // 2
-            x1 = max(center_x - half_size, 0)  # Ensure within image bounds
-            y1 = max(center_y - half_size, 0)
-            x2 = min(center_x + half_size, iw)
-            y2 = min(center_y + half_size, ih)
-
-            # Crop the face and resize to target_size
+            # Crop the face properly (ensure aspect ratio is preserved)
             cropped_face = image_np[y1:y2, x1:x2]
-            cropped_face = cv2.resize(cropped_face, (target_size, target_size))
 
-            return Image.fromarray(cropped_face)
+            # Resize the cropped face to the target size
+            resized_face = cv2.resize(cropped_face, (target_size, target_size), interpolation=cv2.INTER_AREA)
+
+            return Image.fromarray(resized_face)
 
     return None
+
 
 
 
