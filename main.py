@@ -8,7 +8,7 @@ from safetensors.torch import load_file
 from transformers import ViTForImageClassification, AutoConfig, ViTImageProcessor
 
 # Path to the safetensors file
-model_path = "model/model091.safetensors"  # Replace with your safetensors file path
+model_path = "model091.safetensors"  # Replace with your safetensors file path
 
 # Load the model configuration
 config = AutoConfig.from_pretrained("google/vit-base-patch16-224-in21k", num_labels=2)
