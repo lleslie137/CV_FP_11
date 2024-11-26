@@ -8,9 +8,8 @@ from safetensors.torch import load_file
 from transformers import ViTForImageClassification, ViTImageProcessor
 import gdown  # For downloading files from Google Drive
 # Google Drive file ID of your safetensors file
-FILE_ID = "1G9zei96WOx8XdGIZy0BFhCQZ8QoEoGmJ"
-MODEL_FILE = "model091.safetensors"  # Local filename for the downloaded model
-
+FILE_ID = "1QsgZ_2wamTjt491U2iDSGXZQB-4jXxqm"
+MODEL_FILE = "model088-2.safetensors"  # Local filename for the downloaded model
 # Function to download the model file from Google Drive
 @st.cache_data
 def download_model_from_drive(file_id, output_file):
@@ -42,8 +41,7 @@ st.write("Model downloaded successfully.")
 # Load the model
 model = ViTForImageClassification.from_pretrained(
     "google/vit-base-patch16-224-in21k",
-    num_labels=2,
-    torch_dtype=torch.float16
+    num_labels=2
 )
 
 # Load the weights from the safetensors file
