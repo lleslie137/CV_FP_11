@@ -5,23 +5,49 @@ import numpy as np
 from PIL import Image
 import torch
 from safetensors.torch import load_file
-from transformers import ViTForImageClassification, AutoConfig, ViTImageProcessor
+from transformers import ViTForImageClassification, ViTImageProcessor
+import gdown  # For downloading files from Google Drive
+# Google Drive file ID of your safetensors file
+FILE_ID = "1G9zei96WOx8XdGIZy0BFhCQZ8QoEoGmJ"
+MODEL_FILE = "model091.safetensors"  # Local filename for the downloaded model
 
-# Path to the safetensors file
-model_path = "model091.safetensors"  # Replace with your safetensors file path
+# Function to download the model file from Google Drive
+@st.cache_data
+def download_model_from_drive(file_id, output_file):
+    """
+    Downloads the model file from Google Drive.
 
-# Load the model configuration
-# config = AutoConfig.from_pretrained("google/vit-base-patch16-224-in21k", num_labels=2)
+    Args:
+        file_id (str): File ID from the Google Drive shareable link.
+        output_file (str): Local path where the file should be saved.
 
-# # Initialize the model with the configuration
-# model = ViTForImageClassification(config)
+    Returns:
+        str: Path to the downloaded file.
+    """
+    url = f"https://drive.google.com/uc?id={file_id}"
+    gdown.download(url, output_file, quiet=False)
+    return output_file
+
+# Download the safetensors model file
+st.write("Downloading model file from Google Drive...")
+downloaded_model_path = download_model_from_drive(FILE_ID, MODEL_FILE)
+st.write("Model downloaded successfully.")
+
+
+# Download the safetensors model file
+st.write("Downloading model file from Google Drive...")
+downloaded_model_path = download_model_from_drive(FILE_ID, MODEL_FILE)
+st.write("Model downloaded successfully.")
+
+# Load the model
 model = ViTForImageClassification.from_pretrained(
     "google/vit-base-patch16-224-in21k",
     num_labels=2,
     torch_dtype=torch.float16
 )
+
 # Load the weights from the safetensors file
-state_dict = load_file(model_path)  # Use safetensors to load the file
+state_dict = load_file(downloaded_model_path)  # Use safetensors to load the file
 model.load_state_dict(state_dict)
 
 # Set the model to evaluation mode
@@ -81,9 +107,6 @@ def detect_and_crop_face(image, target_size=224, margin=20):
             return Image.fromarray(resized_face)
 
     return None
-
-
-
 
 # Function to make predictions
 def predict_image(image):
