@@ -28,16 +28,7 @@ def download_model_from_drive(file_id, output_file):
     return output_file
 
 # Download the safetensors model file
-st.write("Downloading model file from Google Drive...")
 downloaded_model_path = download_model_from_drive(FILE_ID, MODEL_FILE)
-st.write("Model downloaded successfully.")
-
-
-# Download the safetensors model file
-st.write("Downloading model file from Google Drive...")
-downloaded_model_path = download_model_from_drive(FILE_ID, MODEL_FILE)
-st.write("Model downloaded successfully.")
-
 # Load the model
 model = ViTForImageClassification.from_pretrained(
     "google/vit-base-patch16-224-in21k",
@@ -163,7 +154,6 @@ if uploaded_file is not None:
         label, confidence, probabilities = predict_image(cropped_face)
 
         # Display the results
-        st.write(f"**Prediction:** {label}")
-        st.write(f"**Confidence:** {confidence * 100:.2f}%")
+        st.write(f"**Prediction:** {label} | Confidence:** {confidence * 100:.2f}%")
         st.write("**Class Probabilities:**")
         st.json({"Real": probabilities[0][0], "Fake": probabilities[0][1]})
