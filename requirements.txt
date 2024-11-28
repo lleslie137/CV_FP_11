@@ -4,3 +4,5 @@ torch
 safetensors
 mediapipe
 gdown
+captum
+pillow

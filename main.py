@@ -1,13 +1,15 @@
 import streamlit as st
 import mediapipe as mp
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 import torch
 from safetensors.torch import load_file
 from transformers import ViTForImageClassification, ViTImageProcessor
-import gdown  # For downloading files from Google Drive
-# Google Drive file ID of your safetensors file
+import gdown
+
+
 FILE_ID = "1QsgZ_2wamTjt491U2iDSGXZQB-4jXxqm"
 MODEL_FILE = "model088-2.safetensors"  # Local filename for the downloaded model
 # Function to download the model file from Google Drive
@@ -48,60 +50,58 @@ model.eval()
 # Load the processor
 processor = ViTImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
 st.empty()
-# Function to detect and crop face
-def detect_and_crop_face(image, target_size=224, margin=20):
+
+
+def visualize_attention(image):
     """
-    Detects a face in the image using Mediapipe and properly crops the face, scaling it to the desired size.
+    Visualizes the attention weights for the ViT model.
 
     Args:
         image (PIL.Image): Input image.
-        target_size (int): Desired output size for the cropped face (e.g., 224x224).
-        margin (int): Extra pixels to include around the detected face.
 
     Returns:
-        PIL.Image or None: Cropped and resized face image, or None if no face is detected.
+        PIL.Image: Heatmap overlaid on the original image.
     """
-    mp_face_detection = mp.solutions.face_detection
+    inputs = processor(images=image, return_tensors="pt")
+    outputs = model(**inputs, output_attentions=True)
+    attentions = outputs.attentions  # List of attention matrices
 
-    # Convert PIL image to numpy array
-    image_np = np.array(image)
+    # Use the last layer's attention weights
+    last_attention = attentions[-1]  # (batch_size, num_heads, num_tokens, num_tokens)
+    mean_attention = last_attention.mean(dim=1)  # Average over all heads
 
-    # Mediapipe requires RGB format
-    with mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.5) as face_detection:
-        results = face_detection.process(cv2.cvtColor(image_np, cv2.COLOR_BGR2RGB))
+    # Extract attention for the [CLS] token and map it to the image
+    cls_attention = mean_attention[:, 0, 1:]  # Ignore the [CLS] and [SEP] tokens
+    cls_attention = cls_attention.reshape(14, 14)  # Assuming 14x14 patches
 
-        # If no face is detected, return None
-        if not results.detections:
-            return None
+    # Detach and convert to NumPy
+    cls_attention_np = cls_attention.detach().cpu().numpy()
 
-        # Get the first detected face
-        for detection in results.detections:
-            # Extract bounding box
-            bboxC = detection.location_data.relative_bounding_box
-            ih, iw, _ = image_np.shape
-            x = int(bboxC.xmin * iw)
-            y = int(bboxC.ymin * ih)
-            w = int(bboxC.width * iw)
-            h = int(bboxC.height * ih)
+    # Resize attention to match the input image size
+    cls_attention_resized = cv2.resize(cls_attention_np, image.size, interpolation=cv2.INTER_LINEAR)
 
-            # Add margin around the bounding box
-            x1 = max(x - margin, 0)
-            y1 = max(y - margin, 0)
-            x2 = min(x + w + margin, iw)
-            y2 = min(y + h + margin, ih)
+    # Normalize the heatmap for better visualization
+    cls_attention_resized = (cls_attention_resized - cls_attention_resized.min()) / (
+        cls_attention_resized.max() - cls_attention_resized.min()
+    )
+    cls_attention_resized = (cls_attention_resized * 255).astype(np.uint8)
 
-            # Crop the face properly (ensure aspect ratio is preserved)
-            cropped_face = image_np[y1:y2, x1:x2]
+    # Create a heatmap and overlay it on the image
+    heatmap = cv2.applyColorMap(cls_attention_resized, cv2.COLORMAP_JET)
+    heatmap_image = cv2.addWeighted(np.array(image), 0.5, heatmap, 0.5, 0)
 
-            # Resize the cropped face to the target size
-            resized_face = cv2.resize(cropped_face, (target_size, target_size), interpolation=cv2.INTER_AREA)
+    return Image.fromarray(heatmap_image)
 
-            return Image.fromarray(resized_face)
-
-    return None
-
-# Function to make predictions
 def predict_image(image):
+    label, confidence, probabilities = original_prediction(image)  # Call existing prediction logic
+
+    # Generate attention visualization
+    attention_image = visualize_attention(image)
+
+    return label, confidence, probabilities, attention_image
+
+
+def original_prediction(image):
     """
     Predicts whether an image is real or fake.
 
@@ -126,38 +126,26 @@ def predict_image(image):
 
     return label, confidence.item(), probabilities.tolist()
 
-# Streamlit app
+
 st.title("Deepfake Detection App")
 st.write("Upload an image, and the app will detect if it is real or fake.")
-
-# File uploader
 uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
-
 if uploaded_file is not None:
-    # Load the uploaded image
     image = Image.open(uploaded_file)
+    st.write("Making prediction...")
+    label, confidence, probabilities, attention_image = predict_image(image)
+    st.write("**Visualization:**")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.image(attention_image, caption="Attention Heatmap", use_container_width=True)
+    with col2:
+        st.image(image, caption="Original Image", use_container_width=True)
 
-    # Detect and crop face
-    st.write("Detecting face...")
-    cropped_face = detect_and_crop_face(image)
+    st.write(f"**Prediction:** {label}")
+    st.write(f"**Confidence:** {confidence * 100:.2f}%")
+    st.write("**Class Probabilities:**")
+    st.json({"Real": probabilities[0][0], "Fake": probabilities[0][1]})
 
-    # Display results
-    if cropped_face is None:
-        st.error("No face detected. Please upload an image with a clear face.")
-    else:
-        st.write("Face detected and cropped.")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.image(image, caption="Original Image", use_container_width=True)
-        with col2:
-            st.image(cropped_face, caption="Cropped Face", use_container_width=True)
 
-        # Make prediction
-        st.write("Making prediction...")
-        label, confidence, probabilities = predict_image(cropped_face)
 
-        # Display the results
-        st.write(f"**Prediction:** {label}")
-        st.write(f"**Confidence:** {confidence * 100:.2f}%")
-        st.write("**Class Probabilities:**")
-        st.json({"Real": probabilities[0][0], "Fake": probabilities[0][1]})
+
