@@ -3,7 +3,7 @@ IEEE Deepfake Detection Application.
 <br>
 ## Deployment
 Final model deployment uses the model from VisionTransformer.py. Model is deployed using Streamlit application to allow users to upload images, which the model will classify as real or deepfaked.
-<br>
+<br><br>
 Link to Streamlit app: https://comvisfp11.streamlit.app/
 
 ## Dataset
