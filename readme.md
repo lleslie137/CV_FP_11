@@ -2,7 +2,7 @@
 IEEE Deepfake Detection Application.
 <br>
 ## Deployment
-Final model deployment uses the model from VisionTransformer.py. Model is deployed using Streamlit application to allow users to upload images, which the model will classify as real or deepfaked.
+Final model deployment uses the model from VisionTransformer.py. The model is deployed using a Streamlit application that allow users to upload images, which will be classified as a real or deepfake image. Attention weights are extracted from the last layer of the model that are then used to generate a heatmap. The heatmap is overlaid onto the original image to highlight parts of the image that contributed the most to the model's decision. The heatmap provides visual feedback to the user, showing which regions influenced the prediction, thus, increasing the user's trust in the model's decision
 <br><br>
 Link to Streamlit app: https://comvisfp11.streamlit.app/
 
